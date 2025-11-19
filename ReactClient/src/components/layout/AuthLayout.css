@@ -1,0 +1,34 @@
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.feature-item {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+}
+
+.feature-item .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4facfe;
+  display: inline-block;
+}
+
+.form-container {
+  background: rgba(255, 255, 255, 0.12);
+  padding: 32px 28px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    padding: 24px 20px;
+    margin-top: 12px;
+  }
+}

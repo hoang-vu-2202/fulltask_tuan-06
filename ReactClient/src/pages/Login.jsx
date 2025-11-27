@@ -17,11 +17,14 @@ const LoginPage = () => {
       if (res?.success && res?.data?.access_token) {
         login(res?.data?.user, res?.data?.access_token);
         message.success('Đăng nhập thành công!');
-        navigate('/');
+
         const profile = await getAccountApi().catch(() => null);
         if (profile?.data) {
           login(profile.data, res.data.access_token);
         }
+
+        // Navigate to products search page
+        navigate('/products');
       } else {
         message.error(res?.message || 'Đăng nhập thất bại');
       }
@@ -33,12 +36,9 @@ const LoginPage = () => {
   return (
     <Flex vertical gap={24}>
       <div>
-        <Title level={3} style={{ color: '#fff', marginBottom: 4 }}>
-          Chào mừng trở lại 👋
+        <Title level={3} style={{ marginBottom: 8, textAlign: 'center' }}>
+          Chào mừng trở lại
         </Title>
-        <Text style={{ color: 'rgba(255,255,255,0.7)' }}>
-          Đăng nhập để quản lý người dùng và thử API bảo mật.
-        </Text>
       </div>
 
       <Form
@@ -46,55 +46,42 @@ const LoginPage = () => {
         form={form}
         requiredMark={false}
         onFinish={handleLogin}
+        size="large"
       >
         <Form.Item
-          label={<span style={{ color: '#fff' }}>Email</span>}
+          label="Email"
           name="email"
           rules={[
-            {
-              required: true,
-              message: 'Vui lòng nhập email',
-            },
-            {
-              type: 'email',
-              message: 'Email không hợp lệ',
-            },
+            { required: true, message: 'Vui lòng nhập email' },
+            { type: 'email', message: 'Email không hợp lệ' },
           ]}
         >
           <Input
-            size="large"
-            prefix={<MailOutlined />}
+            prefix={<MailOutlined className="site-form-item-icon" />}
             placeholder="nhapemail@domain.com"
           />
         </Form.Item>
 
         <Form.Item
-          label={<span style={{ color: '#fff' }}>Mật khẩu</span>}
+          label="Mật khẩu"
           name="password"
           rules={[
-            {
-              required: true,
-              message: 'Vui lòng nhập mật khẩu',
-            },
-            {
-              min: 6,
-              message: 'Mật khẩu tối thiểu 6 ký tự',
-            },
+            { required: true, message: 'Vui lòng nhập mật khẩu' },
+            { min: 6, message: 'Mật khẩu tối thiểu 6 ký tự' },
           ]}
         >
           <Input.Password
-            size="large"
-            prefix={<LockOutlined />}
+            prefix={<LockOutlined className="site-form-item-icon" />}
             placeholder="••••••"
           />
         </Form.Item>
 
-        <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
           <Link to="/register">Chưa có tài khoản?</Link>
           <Link to="/forgot-password">Quên mật khẩu?</Link>
         </Flex>
 
-        <Button type="primary" block size="large" htmlType="submit">
+        <Button type="primary" block htmlType="submit" size="large">
           Đăng nhập
         </Button>
       </Form>

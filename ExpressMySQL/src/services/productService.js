@@ -1,66 +1,55 @@
-const { pool } = require('../config/database');
-const { createProductTableQuery, sampleProducts } = require('../models/productModel');
+const { Product, sampleProducts } = require('../models/productModel');
 
 const ensureProductTable = async () => {
-  const connection = await pool.getConnection();
   try {
-    await connection.query(createProductTableQuery);
-    const [countRows] = await connection.query('SELECT COUNT(*) as total FROM products');
-    if (countRows[0].total === 0) {
-      const insertPromises = sampleProducts.map((item) =>
-        connection.query(
-          'INSERT INTO products (name, description, price, category, image_url, stock) VALUES (?, ?, ?, ?, ?, ?)',
-          [item.name, item.description, item.price, item.category, item.image_url, item.stock],
-        ),
-      );
-      await Promise.all(insertPromises);
+    const count = await Product.countDocuments();
+    if (count === 0) {
+      await Product.insertMany(sampleProducts);
       console.log('✅ Seeded sample products');
     }
-  } finally {
-    connection.release();
+  } catch (error) {
+    console.error('Ensure products error:', error);
+    throw error;
   }
 };
 
 const getCategories = async () => {
-  const connection = await pool.getConnection();
   try {
-    const [rows] = await connection.query('SELECT DISTINCT category FROM products ORDER BY category');
-    return rows.map((row) => row.category);
-  } finally {
-    connection.release();
+    const categories = await Product.distinct('category');
+    return categories.sort();
+  } catch (error) {
+    console.error('Get categories error:', error);
+    throw error;
   }
 };
 
 const getProducts = async ({ category, page = 1, limit = 6 }) => {
-  const connection = await pool.getConnection();
   try {
-    const offset = (page - 1) * limit;
-    let whereClause = '';
-    const params = [];
+    const skip = (page - 1) * limit;
+    const query = {};
+
     if (category && category !== 'all') {
-      whereClause = 'WHERE category = ?';
-      params.push(category);
+      query.category = category;
     }
 
-    const [data] = await connection.query(
-      `SELECT * FROM products ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...params, Number(limit), Number(offset)],
-    );
-
-    const [countRows] = await connection.query(
-      `SELECT COUNT(*) as total FROM products ${whereClause}`,
-      params,
-    );
+    const [items, total] = await Promise.all([
+      Product.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit)),
+      Product.countDocuments(query),
+    ]);
 
     return {
-      items: data,
-      total: countRows[0].total,
+      items,
+      total,
       page: Number(page),
       limit: Number(limit),
-      hasMore: offset + data.length < countRows[0].total,
+      hasMore: skip + items.length < total,
     };
-  } finally {
-    connection.release();
+  } catch (error) {
+    console.error('Get products error:', error);
+    throw error;
   }
 };
 

@@ -1,17 +1,17 @@
 const { Product } = require('../models/productModel');
 
 /**
- * Advanced product search with fuzzy matching (MongoDB text search) and multiple filters
- * @param {Object} params - Search parameters
- * @param {string} params.keyword - Search keyword (fuzzy match on name and description)
- * @param {string} params.category - Filter by category
- * @param {number} params.minPrice - Minimum price filter
- * @param {number} params.maxPrice - Maximum price filter
- * @param {boolean} params.onSale - Filter only sale items
- * @param {string} params.sortBy - Sort order: 'views', 'price_asc', 'price_desc', 'newest', 'relevance'
- * @param {number} params.page - Page number (default: 1)
- * @param {number} params.limit - Items per page (default: 12)
- * @returns {Promise<Object>} Search results with pagination
+ * Tìm kiếm sản phẩm nâng cao với khớp mờ (MongoDB text search) và nhiều bộ lọc
+ * @param {Object} params - Các tham số tìm kiếm
+ * @param {string} params.keyword - Từ khóa tìm kiếm (khớp mờ trên tên và mô tả)
+ * @param {string} params.category - Lọc theo danh mục
+ * @param {number} params.minPrice - Giá thấp nhất
+ * @param {number} params.maxPrice - Giá cao nhất
+ * @param {boolean} params.onSale - Chỉ lọc sản phẩm đang giảm giá
+ * @param {string} params.sortBy - Sắp xếp theo: 'views', 'price_asc', 'price_desc', 'newest', 'relevance'
+ * @param {number} params.page - Số trang (mặc định: 1)
+ * @param {number} params.limit - Số lượng mỗi trang (mặc định: 12)
+ * @returns {Promise<Object>} Kết quả tìm kiếm kèm phân trang
  */
 const searchProducts = async ({
     keyword = '',
@@ -24,67 +24,67 @@ const searchProducts = async ({
     limit = 12,
 }) => {
     try {
+        // Tính toán số lượng bản ghi cần bỏ qua (để phân trang)
         const skip = (page - 1) * limit;
         let query = {};
         let sort = {};
 
-        // Text search với MongoDB (fuzzy matching)
+        // 1. Tìm kiếm văn bản với MongoDB (Dùng Regex để tìm gần đúng - Fuzzy Search)
         if (keyword && keyword.trim()) {
-            query.$text = { $search: keyword.trim() };
-            // Thêm relevance score vào kết quả
-            query = { ...query };
+            // Tìm sản phẩm có Tên HOẶC Mô tả chứa từ khóa (không phân biệt hoa thường 'i')
+            // Ví dụ: gõ "lap" sẽ tìm thấy "Laptop"
+            const regex = new RegExp(keyword.trim(), 'i');
+            query.$or = [
+                { name: regex },
+                { description: regex }
+            ];
         }
 
-        // Category filter
+        // 2. Lọc theo Danh mục
         if (category && category !== 'all' && category.trim()) {
             query.category = category;
         }
 
-        // Price range filter
+        // 3. Lọc theo Khoảng giá
         if (minPrice > 0 || maxPrice < 999999999) {
             query.price = {};
-            if (minPrice > 0) query.price.$gte = minPrice;
-            if (maxPrice < 999999999) query.price.$lte = maxPrice;
+            if (minPrice > 0) query.price.$gte = minPrice; // Lớn hơn hoặc bằng minPrice
+            if (maxPrice < 999999999) query.price.$lte = maxPrice; // Nhỏ hơn hoặc bằng maxPrice
         }
 
-        // On sale filter
+        // 4. Lọc sản phẩm đang giảm giá (Flash Sale)
         if (onSale === true || onSale === 'true') {
             query.isOnSale = true;
         }
 
-        // Determine sort order
+        // 5. Xác định cách sắp xếp
         switch (sortBy) {
             case 'views':
-                sort = { views: -1 };
+                sort = { views: -1 }; // Xem nhiều nhất
                 break;
             case 'price_asc':
-                sort = { price: 1 };
+                sort = { price: 1 }; // Giá tăng dần
                 break;
             case 'price_desc':
-                sort = { price: -1 };
+                sort = { price: -1 }; // Giá giảm dần
                 break;
             case 'newest':
-                sort = { createdAt: -1 };
+                sort = { createdAt: -1 }; // Mới nhất
                 break;
             case 'relevance':
             default:
-                if (keyword && keyword.trim()) {
-                    // Sort by text score (relevance) then views
-                    sort = { score: { $meta: 'textScore' }, views: -1 };
-                } else {
-                    sort = { views: -1 };
-                }
+                // Vì dùng Regex nên không có "điểm liên quan" (textScore), ta mặc định sort theo view
+                sort = { views: -1 };
                 break;
         }
 
-        // Execute query
+        // Tạo câu truy vấn cơ bản
         let itemsQuery = Product.find(query);
 
-        // Add text score projection if searching by keyword
-        if (keyword && keyword.trim()) {
-            itemsQuery = itemsQuery.select({ score: { $meta: 'textScore' } });
-        }
+        // Nếu có tìm kiếm từ khóa, cần lấy thêm điểm phù hợp (score) để sắp xếp
+        // (Đã bỏ vì chuyển sang Regex)
 
+        // Thực thi song song: Lấy dữ liệu sản phẩm VÀ đếm tổng số kết quả
         const [items, total] = await Promise.all([
             itemsQuery.sort(sort).skip(skip).limit(Number(limit)),
             Product.countDocuments(query),
@@ -110,7 +110,7 @@ const searchProducts = async ({
             },
         };
     } catch (error) {
-        console.error('Search error:', error);
+        console.error('Lỗi tìm kiếm:', error);
         throw error;
     }
 };

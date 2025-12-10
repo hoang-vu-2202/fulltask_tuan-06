@@ -264,6 +264,7 @@ const ProductSearch = () => {
                                                     alt={product.name}
                                                     src={product.imageUrl}
                                                     className="product-image"
+                                                    loading="lazy"
                                                 />
                                                 {product.isOnSale && (
                                                     <Badge.Ribbon text={`-${product.discountPercent}%`} color="red">
